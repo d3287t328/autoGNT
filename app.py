@@ -28,14 +28,10 @@ def is_unique(new_article, articles):
     vectors = vectorizer.transform([new_article] + articles)
 
     # Calculate the cosine similarity of the new article to each of the existing articles
-    similarity_scores = cosine_similarity(vectors[0:1], vectors[1:])
+    similarity_scores = cosine_similarity(vectors[:1], vectors[1:])
 
     # If the highest similarity score is above a threshold (for example, 0.8), return False (not unique), keep at around 0.6
-    if np.max(similarity_scores) > 0.6:
-        return False
-
-    # Otherwise, return True (unique)
-    return True
+    return np.max(similarity_scores) <= 0.6
 
 # Scrapes google search results
 def get_latest_results(query, api_key):
@@ -55,7 +51,14 @@ def get_latest_results(query, api_key):
     # List of websites to exclude because you can't scrape them 
     excluded_websites = ["ft.com", "cointelegraph.com", "cell.com", "futuretools.io"]
 
-    urls = [r["link"] for r in results["organic_results"] if not any(excluded_site in r["link"] for excluded_site in excluded_websites)][:40] #limit to first 40 results
+    urls = [
+        r["link"]
+        for r in results["organic_results"]
+        if all(
+            excluded_site not in r["link"]
+            for excluded_site in excluded_websites
+        )
+    ][:40]
 
     parsed_texts = [] #list to store parsed text and corresponding URL
     article_texts = []  # list to store original article texts for similarity comparison
@@ -83,7 +86,7 @@ def get_latest_results(query, api_key):
             splitted_texts = text_splitter.split_text(article.text)
             if not splitted_texts:
              print(article.text)
-              
+
             #Append tuple of splitted text and URL to the list
             parsed_texts.append((splitted_texts, url))
             article_texts.append(article.text)  # Add the text of the new unique article to the list
